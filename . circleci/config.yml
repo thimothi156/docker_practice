@@ -2,18 +2,28 @@ version: 2.1
 
 jobs:
   test:
-    runs-on: ubuntu-latest
     docker:
       - image: cimg/ruby:3.4.7
+      - image: cimg/postgres:16.0
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
 
     working_directory: ~/app
+
+    environment:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_test
 
     steps:
       - checkout
 
       - run:
           name: Install OS dependencies
-          command: sudo apt-get update && sudo apt-get install -y libpq-dev
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y libpq-dev
 
       - run:
           name: Install bundler
@@ -25,8 +35,7 @@ jobs:
 
       - run:
           name: Setup database
-          command: |
-            bundle exec rails db:create db:migrate RAILS_ENV=test
+          command: bundle exec rails db:prepare
 
       - run:
           name: Run test cases

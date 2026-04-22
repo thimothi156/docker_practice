@@ -1,0 +1,38 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/ruby:3.4.7
+
+    working_directory: ~/app
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install OS dependencies
+          command: sudo apt-get update && sudo apt-get install -y libpq-dev
+
+      - run:
+          name: Install bundler
+          command: gem install bundler
+
+      - run:
+          name: Install Ruby gems
+          command: bundle install --jobs 4 --retry 3
+
+      - run:
+          name: Setup database
+          command: |
+            bundle exec rails db:create db:migrate RAILS_ENV=test
+
+      - run:
+          name: Run test cases
+          command: bundle exec rspec
+
+workflows:
+  version: 2
+  test_pipeline:
+    jobs:
+      - test

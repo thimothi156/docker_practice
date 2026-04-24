@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  aws-cli: circleci/aws-cli@4.1
 
 jobs:
   test:
@@ -40,9 +42,49 @@ jobs:
       - run:
           name: Run test cases
           command: bundle exec rspec
+  build_and_push:
+    machine: true
+
+    steps:
+      - checkout
+
+      - aws-cli/setup:
+          region: ap-south-1
+
+      - run:
+          name: Login to ECR
+          command: |
+            aws ecr get-login-password --region ap-south-1 \
+            | docker login \
+            --username AWS \
+            --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com
+
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t my-app:${CIRCLE_SHA1} .
+
+      - run:
+          name: Tag Docker image
+          command: |
+            docker tag my-app:${CIRCLE_SHA1} \
+            ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/my-app:${CIRCLE_SHA1}
+
+      - run:
+          name: Push image to ECR
+          command: |
+            docker push \
+            ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/my-app:${CIRCLE_SHA1}
 
 workflows:
   version: 2
   test_pipeline:
     jobs:
       - test
+
+      - build_and_push:
+          requires:
+            - test
+          filters:
+            branches:
+              only: main

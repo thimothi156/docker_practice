@@ -1,0 +1,90 @@
+version: 2.1
+orbs:
+  aws-cli: circleci/aws-cli@4.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/ruby:3.4.7
+      - image: cimg/postgres:16.0
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+
+    working_directory: ~/app
+
+    environment:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_test
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install OS dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y libpq-dev
+
+      - run:
+          name: Install bundler
+          command: gem install bundler
+
+      - run:
+          name: Install Ruby gems
+          command: bundle install --jobs 4 --retry 3
+
+      - run:
+          name: Setup database
+          command: bundle exec rails db:prepare
+
+      - run:
+          name: Run test cases
+          command: bundle exec rspec
+  build_and_push:
+    machine: true
+
+    steps:
+      - checkout
+
+      - aws-cli/setup:
+          region: ap-south-1
+
+      - run:
+          name: Login to ECR
+          command: |
+            aws ecr get-login-password --region ap-south-1 \
+            | docker login \
+            --username AWS \
+            --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com
+
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t my-app:${CIRCLE_SHA1} .
+
+      - run:
+          name: Tag Docker image
+          command: |
+            docker tag my-app:${CIRCLE_SHA1} \
+            ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/my-app:${CIRCLE_SHA1}
+
+      - run:
+          name: Push image to ECR
+          command: |
+            docker push \
+            ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/my-app:${CIRCLE_SHA1}
+
+workflows:
+  version: 2
+  test_pipeline:
+    jobs:
+      - test
+
+      - build_and_push:
+          requires:
+            - test
+          filters:
+            branches:
+              only: main

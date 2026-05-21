@@ -91,11 +91,11 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    host: ENV["AWS_DATABASE_HOST"]
+    host: <%= ENV["AWS_DATABASE_HOST"] %>
     port: 5432
-    database: ENV["AWS_DATABASE_NAME"]
-    username: ENV["AWS_DATABASE_USERNAME"]
-    password: ENV["AWS_DATABASE_PASSWORD"]
+    database: <%= ENV["AWS_DATABASE_NAME"] %>
+    username: <%= ENV["AWS_DATABASE_USERNAME"] %>
+    password: <%= ENV["AWS_DATABASE_PASSWORD"] %>
   cache:
     <<: *primary_production
     database: docker_practice_production_cache

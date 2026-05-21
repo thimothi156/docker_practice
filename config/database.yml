@@ -15,6 +15,10 @@
 default: &default
   adapter: postgresql
   encoding: unicode
+  username: pinc
+  password: pinc
+  host: localhost
+
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
@@ -28,10 +32,10 @@ development:
   # To create additional roles in PostgreSQL see `$ createuser --help`.
   # When left blank, PostgreSQL will use the default role. This is
   # the same name as the operating system user running Rails.
-  username: pinc
+  # username: pinc
 
   # The password associated with the PostgreSQL role (username).
-  password: pinc
+  # password: pinc
 
   # Connect on a TCP socket. Omitted by default since the client uses a
   # domain socket that doesn't need configuration. Windows does not have
@@ -87,9 +91,11 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    database: docker_practice_production
-    username: docker_practice
-    password: <%= ENV["DOCKER_PRACTICE_DATABASE_PASSWORD"] %>
+    host: ENV["AWS_DATABASE_HOST"]
+    port: 5432
+    database: ENV["AWS_DATABASE_NAME"]
+    username: ENV["AWS_DATABASE_USERNAME"]
+    password: ENV["AWS_DATABASE_PASSWORD"]
   cache:
     <<: *primary_production
     database: docker_practice_production_cache
